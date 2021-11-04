@@ -1,0 +1,160 @@
+﻿using System;
+using UnityEngine;
+using Video.Plugin;
+
+namespace Video.Plugin
+{
+    public class WebVideoPlayer : IDisposable
+    {
+        public Texture2D texture { private set; get; }
+        public float volume { private set; get; }
+        public bool playing => GetState() == VideoState.PLAYING;
+        public bool isError => GetState() == VideoState.ERROR;
+        public bool visible { get; set; } = true;
+
+        public readonly string url;
+
+        private string videoPlayerId;
+
+        private readonly IVideoPluginWrapper plugin;
+
+        private bool isReady = false;
+        private bool playWhenReady = false;
+        private float playStartTime = -1;
+
+        public WebVideoPlayer(string id, string url, bool useHls, IVideoPluginWrapper plugin)
+        {
+            videoPlayerId = id;
+            this.plugin = plugin;
+            this.url = url;
+            texture = new Texture2D(1, 1);
+            plugin.Create(id, url, useHls);
+        }
+
+        public void Update()
+        {
+            switch (plugin.GetState(videoPlayerId))
+            {
+                case (int)VideoState.ERROR:
+                    Debug.LogError(plugin.GetError(videoPlayerId));
+                    break;
+                case (int)VideoState.READY:
+                    if (!isReady)
+                    {
+                        isReady = true;
+                        texture.UpdateExternalTexture((IntPtr)plugin.GetTexture(videoPlayerId));
+                        texture.Apply();
+                    }
+
+                    if (playWhenReady)
+                    {
+                        PlayInternal();
+                        playWhenReady = false;
+                    }
+
+                    break;
+                case (int)VideoState.PLAYING:
+                    if (visible)
+                        plugin.TextureUpdate(videoPlayerId);
+
+                    break;
+            }
+        }
+
+        public void Play()
+        {
+            if (isError)
+                return;
+
+            if (!isReady)
+            {
+                playWhenReady = true;
+                return;
+            }
+
+            PlayInternal();
+        }
+
+        private void PlayInternal()
+        {
+            Debug.Log("Play Internal!");
+            plugin.Play(videoPlayerId, playStartTime);
+            playStartTime = -1;
+        }
+
+        public void Pause()
+        {
+            if (isError)
+                return;
+
+            playStartTime = plugin.GetTime(videoPlayerId);
+            plugin.Pause(videoPlayerId);
+            playWhenReady = false;
+        }
+
+        public void SetVolume(float volume)
+        {
+            if (isError)
+                return;
+
+            plugin.SetVolume(videoPlayerId, volume);
+            this.volume = volume;
+        }
+
+        public void SetTime(float timeSecs)
+        {
+            if (isError)
+                return;
+
+            playStartTime = timeSecs;
+            plugin.SetTime(videoPlayerId, timeSecs);
+        }
+
+        public void SetLoop(bool loop)
+        {
+            if (isError)
+                return;
+
+            plugin.SetLoop(videoPlayerId, loop);
+        }
+
+        public void SetPlaybackRate(float playbackRate)
+        {
+            if (isError)
+                return;
+
+            plugin.SetPlaybackRate(videoPlayerId, playbackRate);
+        }
+
+        public float GetTime()
+        {
+            if (isError)
+                return 0;
+
+            return plugin.GetTime(videoPlayerId);
+        }
+
+        public float GetDuration()
+        {
+            if (isError)
+                return 0;
+
+            float duration = plugin.GetDuration(videoPlayerId);
+
+            if (float.IsNaN(duration))
+                duration = -1;
+
+            return duration;
+        }
+
+        public VideoState GetState()
+        {
+            return (VideoState)plugin.GetState(videoPlayerId);
+        }
+
+        public void Dispose()
+        {
+            plugin.Remove(videoPlayerId);
+        }
+    }
+}

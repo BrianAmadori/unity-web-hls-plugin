@@ -1,0 +1,17 @@
+{
+    "name": "WebVideoPlayer",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c19f3f0ac4015914e92315b030b9fd96",
+        "GUID:1f34d0b80c73dab4481e0b6d71090412"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
